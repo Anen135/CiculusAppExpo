@@ -46,7 +46,19 @@
         "Include metrics such as entry frequency, mood tracking, and word count." : "Включить такие метрики, как частота записей, отслеживание настроения и количество слов."
     },
     "Update Editor Page" : {
-        "By default, the start time of a new record is set to the end of the nearest old record." : "По умолчанию время начала новой записи становится на конец ближайшей старой записи",
-        "By default, the end time of a new record is set to the current time." : "По умолчанию время конца записи ставится на нынешнее время."
+        "Show duration as time scale" : "Продолжительность показать как временную шкалу"
+    },
+    "Fix" : {
+        "The app crashes when trying to add a new entry on certain devices." : "Приложение вылетает при попытке добавить новую запись на некоторых устройствах.",
+        "Fix synchronization issues with cloud storage services." : "Исправить проблемы синхронизации с облачными сервисами хранения.",
+        "Resolve UI glitches on high-resolution screens." : "Устранить сбои интерфейса на экранах с высоким разрешением.",
+        "Correct spelling errors in the user interface." : "Исправить орфографические ошибки в пользовательском интерфейсе.",
+        "Fix notification bugs that prevent reminders from appearing." : "Исправить ошибки уведомлений, которые мешают появлению напоминаний.",
+        "Address performance issues causing slow load times." : "Устранить проблемы с производительностью, вызывающие медленное время загрузки.",
+        "Fix data corruption issues when exporting diary entries." : "Исправить проблемы с повреждением данных при экспорте записей дневника.",
+        "Resolve compatibility issues with the latest operating system updates." : "Устранить проблемы совместимости с последними обновлениями операционной системы.",
+        "Fix layout issues on smaller screen sizes." : "Исправить проблемы с макетом на экранах меньшего размера.",
+        "Correct time zone handling for diary entries." : "Исправить обработку часовых поясов для записей дневника.",
+        "When the time passes through 00:00, the label should change from 'today' to 'yesterday'in real time.": "Когда время проходит через 00:00, метка должна изменяться с 'сегодня' на 'вчера' в реальном времени."
     }
 }

@@ -1,4 +1,5 @@
 import { DiaryEntry, useDiary } from "@/hooks/useDiary";
+import { dateToTimeString, getCurrentTime, getLocalDateStr, timeStringToDate } from "@/utils/dateUtil";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useRouter } from "expo-router";
 import { useSearchParams } from "expo-router/build/hooks";
@@ -7,45 +8,25 @@ import { Alert, Button, Platform, Pressable, ScrollView, Text, TextInput } from 
 import { SafeAreaView } from "react-native-safe-area-context";
 import ColorPicker from "react-native-wheel-color-picker";
 
-function timeStringToDate(time: string) {
-  const [h, m, s] = time.split(":").map(Number);
-  const d = new Date();
-  d.setHours(h, m, s || 0, 0);
-  return d;
-}
-
-function dateToTimeString(date: Date) {
-  return `${date.getHours().toString().padStart(2, "0")}:` + `${date.getMinutes().toString().padStart(2, "0")}:00`;
-}
-
-function getCurrentTime() {
-  const now = new Date();
-  const pad = (n: number) => n.toString().padStart(2, "0");
-  return `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-}
-
 export default function EntryPage() {
+  const { addEntry, updateEntry, deleteEntry, getLatestEndTime } = useDiary();
+
   const params = useSearchParams();
   const router = useRouter();
-  const { addEntry, updateEntry, deleteEntry, getLatestEndTime} = useDiary();
-
   const entryJson = params.get("entry");
   const existingEntry: DiaryEntry | null = entryJson ? JSON.parse(entryJson) : null;
 
+  const entryDateStr = existingEntry?.Date || getLocalDateStr(new Date());
   const [name, setName] = useState(existingEntry?.Name || "");
   const [notes, setNotes] = useState(existingEntry?.Notes || "");
-
   const [startTime, setStartTime] = useState(existingEntry?.StartTime || "00:00:00");
   const [endTime, setEndTime] = useState(existingEntry?.EndTime || getCurrentTime());
-
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
-
   const [duration, setDuration] = useState(0);
-
   const [color, setColor] = useState(existingEntry?.Color || "#4CAF50");
 
-  // пересчёт длительности
+  // Пересчёт длительности
   useEffect(() => {
     const [h1, m1] = startTime.split(":").map(Number);
     const [h2, m2] = endTime.split(":").map(Number);
@@ -53,15 +34,18 @@ export default function EntryPage() {
     const endSec = h2 * 3600 + m2 * 60;
     setDuration(Math.max(0, endSec - startSec));
   }, [startTime, endTime]);
-
+  // Установка времени начала по последнему времени окончания
   useEffect(() => {
-    if (!existingEntry?.Id) getLatestEndTime().then(latest => { setStartTime(latest); })
-  });
-
+    if (!existingEntry?.Id) {
+      getLatestEndTime(timeStringToDate("00:00:00", entryDateStr)).then(latest => {
+        setStartTime(latest);
+      });
+    }
+  }, [entryDateStr, existingEntry?.Id, getLatestEndTime]);
 
   const handleSave = async () => {
     const entryData = {
-      Date: existingEntry?.Date || new Date().toISOString().slice(0, 10),
+      Date: entryDateStr,
       Name: name.trim() || "New Entry",
       Notes: notes,
       StartTime: startTime,
@@ -78,22 +62,22 @@ export default function EntryPage() {
     router.back();
   };
 
-
-
-
   const handleDelete = async () => {
     if (!existingEntry?.Id) return;
-      Alert.alert(
-        "Подтвердите удаление",
-        "Вы уверены, что хотите удалить эту запись?",
-        [
-          { text: "Отмена", style: "cancel" },
-          { text: "Удалить", onPress: async () => {
+    Alert.alert(
+      "Подтвердите удаление",
+      "Вы уверены, что хотите удалить эту запись?",
+      [
+        { text: "Отмена", style: "cancel" },
+        {
+          text: "Удалить",
+          onPress: async () => {
             await deleteEntry(existingEntry.Id);
             router.back();
-          }}
-        ]
-      );
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -104,6 +88,7 @@ export default function EntryPage() {
           value={name}
           onChangeText={setName}
           placeholder="Title"
+          placeholderTextColor="#999"
           style={{
             borderWidth: 1,
             borderColor: "#ccc",
@@ -125,13 +110,15 @@ export default function EntryPage() {
 
         {showStartPicker && (
           <DateTimePicker
-            value={timeStringToDate(startTime)}
+            value={timeStringToDate(startTime, entryDateStr)} // ← ключевое исправление!
             mode="time"
             is24Hour
             display={Platform.OS === "ios" ? "spinner" : "default"}
-            onChange={(_, date) => {
+            onChange={(_, selectedDate) => {
               setShowStartPicker(false);
-              if (date) setStartTime(dateToTimeString(date));
+              if (selectedDate) {
+                setStartTime(dateToTimeString(selectedDate));
+              }
             }}
           />
         )}
@@ -144,17 +131,17 @@ export default function EntryPage() {
           <Text>End: {endTime.slice(0, 5)}</Text>
         </Pressable>
 
-
-
         {showEndPicker && (
           <DateTimePicker
-            value={timeStringToDate(endTime)}
+            value={timeStringToDate(endTime, entryDateStr)} // ← ключевое исправление!
             mode="time"
             is24Hour
             display={Platform.OS === "ios" ? "spinner" : "default"}
-            onChange={(_, date) => {
+            onChange={(_, selectedDate) => {
               setShowEndPicker(false);
-              if (date) setEndTime(dateToTimeString(date));
+              if (selectedDate) {
+                setEndTime(dateToTimeString(selectedDate));
+              }
             }}
           />
         )}
@@ -163,12 +150,16 @@ export default function EntryPage() {
           Duration: {Math.floor(duration / 3600).toString().padStart(2, "0")}:
           {Math.floor((duration % 3600) / 60).toString().padStart(2, "0")}
         </Text>
+        <Text style={{ fontWeight: "bold", fontSize: 16, marginVertical: 12 }}>
+          Date: {entryDateStr}
+        </Text>
 
         <Text style={{ fontWeight: "bold", fontSize: 16 }}>Notes</Text>
         <TextInput
           value={notes}
           onChangeText={setNotes}
           placeholder="Notes..."
+          placeholderTextColor="#999"
           multiline
           style={{
             borderWidth: 1,
@@ -180,8 +171,8 @@ export default function EntryPage() {
             textAlignVertical: "top",
           }}
         />
-        <Text style={{ fontWeight: "bold", fontSize: 16, marginVertical: 12 }}>Color</Text>
 
+        <Text style={{ fontWeight: "bold", fontSize: 16, marginVertical: 12 }}>Color</Text>
         <ColorPicker
           color={color}
           thumbSize={30}
@@ -190,12 +181,8 @@ export default function EntryPage() {
           row={false}
           swatches={true}
           swatchesLast={true}
-          onColorChange={(selectedColor) => {
-            setColor(selectedColor);
-          }}
-
+          onColorChange={setColor}
         />
-
         <Text style={{ textAlign: "center", marginBottom: 12 }}>Выбранный цвет: {color}</Text>
 
         <Button title="Save" onPress={handleSave} />

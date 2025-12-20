@@ -1,3 +1,4 @@
+import { getLocalDateStr } from "@/utils/dateUtil";
 import { useSQLiteContext } from "expo-sqlite";
 import { useEffect, useState } from "react";
 
@@ -13,7 +14,7 @@ export interface DiaryEntry {
 }
 
 export function useDiary() {
-  const db = useSQLiteContext(); 
+  const db = useSQLiteContext();
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
   useEffect(() => {
     const load = async () => {
@@ -79,21 +80,16 @@ export function useDiary() {
       entry.Color || "#4CAF50",
       id
     );
-    
   };
 
   const deleteEntry = async (id: number) => {
     await db.runAsync(`DELETE FROM DiaryEntry WHERE Id = ?`, id);
-    
   };
 
-  const getLatestEndTime = async (): Promise<string> => {
+  const getLatestEndTime = async (date: Date | null = null): Promise<string> => {
     try {
-      const today = new Date().toISOString().slice(0, 10);
-      const result = await db.getFirstAsync<{ max_end_time: string }>(
-        `SELECT MAX(EndTime) AS max_end_time FROM DiaryEntry WHERE Date = ?`,
-        today
-      );
+      const today = getLocalDateStr(date ?? new Date());
+      const result = await db.getFirstAsync<{ max_end_time: string }>( `SELECT MAX(EndTime) AS max_end_time FROM DiaryEntry WHERE Date = ?`, today );
       return result?.max_end_time || "00:00:00";
     } catch (e) {
       console.error("Ошибка при получении последнего EndTime:", e);
@@ -101,5 +97,5 @@ export function useDiary() {
     }
   };
 
-  return { entries, addEntry, updateEntry, deleteEntry, loadEntries, getLatestEndTime };
+  return { entries, addEntry, updateEntry, deleteEntry, loadEntries, getLatestEndTime, };
 }

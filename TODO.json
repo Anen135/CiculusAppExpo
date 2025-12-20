@@ -1,0 +1,52 @@
+{
+    "Add categories" : {
+        "Add categories" : "Добавить категории",
+        "Add ability to categorize diary entries for better organization." : "Добавить возможность категоризировать записи дневника для лучшей организации.",
+        "Add tags" : "Добавить теги",
+        "Add ability to tag diary entries for easier searching and filtering." : "Добавить возможность помечать записи дневника для облегчения поиска и фильтрации."
+    },
+    "Add calendar view" : {
+        "Add calendar view" : "Добавить вид календаря",
+        "Implement a calendar view to visualize diary entries by date." : "Реализовать вид календаря для визуализации записей дневника по дате.",
+        "Add ability to jump to specific dates in the diary." : "Добавить возможность перехода к определенным датам в дневнике."
+    }, 
+    "Add search functionality" : {
+        "Add search functionality" : "Добавить функцию поиска",
+        "Implement a search feature to find diary entries by keywords." : "Реализовать функцию поиска для нахождения записей дневника по ключевым словам.",
+        "Add filters to narrow down search results." : "Добавить фильтры для сужения результатов поиска."
+    }, 
+    "Add multimedia support" : {
+        "Add multimedia support" : "Добавить поддержку мультимедиа",
+        "Allow users to attach images, audio, or video to diary entries." : "Позволить пользователям прикреплять изображения, аудио или видео к записям дневника.",
+        "Implement a media gallery for easy access to attached files." : "Реализовать медиагалерею для легкого доступа к прикрепленным файлам."
+    },
+    "Add export options" : {
+        "Add export options" : "Добавить параметры экспорта",
+        "Implement functionality to export diary entries as PDF or text files." : "Реализовать функцию экспорта записей дневника в формате PDF или текстовых файлов.",
+        "Add option to back up diary entries to cloud storage." : "Добавить возможность резервного копирования записей дневника в облачное хранилище."
+    },
+    "Add reminders" : {
+        "Add reminders" : "Добавить напоминания",
+        "Implement a reminder feature to prompt users to write in their diary." : "Реализовать функцию напоминаний, чтобы побуждать пользователей писать в своем дневнике.",
+        "Allow users to set custom reminder times." : "Позволить пользователям устанавливать собственное время напоминаний."
+    }, 
+    "Add settings page" : {
+        "Add settings page" : "Добавить страницу настроек",
+        "Implement a settings page to customize app preferences." : "Реализовать страницу настроек для настройки предпочтений приложения.",
+        "Allow users to change themes, fonts, and notification settings." : "Позволить пользователям изменять темы, шрифты и настройки уведомлений."
+    },
+    "Add entry template" : {
+        "Add entry template" : "Добавить шаблон записи",
+        "Implement predefined templates for diary entries to guide users." : "Реализовать предопределенные шаблоны для записей дневника, чтобы направлять пользователей.",
+        "Allow users to create and save their own entry templates." : "Позволить пользователям создавать и сохранять свои собственные шаблоны записей."
+    }, 
+    "Add statistics dashboard" : {
+        "Add statistics dashboard" : "Добавить панель статистики",
+        "Implement a dashboard to display statistics about diary entries." : "Реализовать панель для отображения статистики о записях дневника.",
+        "Include metrics such as entry frequency, mood tracking, and word count." : "Включить такие метрики, как частота записей, отслеживание настроения и количество слов."
+    },
+    "Update Editor Page" : {
+        "By default, the start time of a new record is set to the end of the nearest old record." : "По умолчанию время начала новой записи становится на конец ближайшей старой записи",
+        "By default, the end time of a new record is set to the current time." : "По умолчанию время конца записи ставится на нынешнее время."
+    }
+}

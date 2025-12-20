@@ -1,13 +1,12 @@
 import { DayTimeline } from "@/components/DayTimeline";
-import { useDiaryContext } from "@/context/DiaryContext";
-import { DiaryEntry } from "@/hooks/useDiary";
+import { DiaryEntry, useDiary } from "@/hooks/useDiary";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Button, FlatList, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function MainPage() {
-  const { entries, loadEntries } = useDiaryContext();
+  const { entries, loadEntries } = useDiary();
   const [currentDay, setCurrentDay] = useState(new Date());
   const router = useRouter();
 

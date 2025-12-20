@@ -1,16 +1,11 @@
-import { useDiaryContext } from "@/context/DiaryContext";
-import { DiaryEntry } from "@/hooks/useDiary";
+import { DiaryEntry, useDiary } from "@/hooks/useDiary";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useRouter } from "expo-router";
 import { useSearchParams } from "expo-router/build/hooks";
 import { useEffect, useState } from "react";
-import { Button, Platform, Pressable, ScrollView, Text, TextInput } from "react-native";
+import { Alert, Button, Platform, Pressable, ScrollView, Text, TextInput } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ColorPicker from "react-native-wheel-color-picker";
-
-
-
-
 
 function timeStringToDate(time: string) {
   const [h, m, s] = time.split(":").map(Number);
@@ -23,12 +18,16 @@ function dateToTimeString(date: Date) {
   return `${date.getHours().toString().padStart(2, "0")}:` + `${date.getMinutes().toString().padStart(2, "0")}:00`;
 }
 
-
+function getCurrentTime() {
+  const now = new Date();
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+}
 
 export default function EntryPage() {
   const params = useSearchParams();
   const router = useRouter();
-  const { addEntry, updateEntry } = useDiaryContext();
+  const { addEntry, updateEntry, deleteEntry, getLatestEndTime} = useDiary();
 
   const entryJson = params.get("entry");
   const existingEntry: DiaryEntry | null = entryJson ? JSON.parse(entryJson) : null;
@@ -37,7 +36,7 @@ export default function EntryPage() {
   const [notes, setNotes] = useState(existingEntry?.Notes || "");
 
   const [startTime, setStartTime] = useState(existingEntry?.StartTime || "00:00:00");
-  const [endTime, setEndTime] = useState(existingEntry?.EndTime || "00:00:00");
+  const [endTime, setEndTime] = useState(existingEntry?.EndTime || getCurrentTime());
 
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
@@ -54,6 +53,11 @@ export default function EntryPage() {
     const endSec = h2 * 3600 + m2 * 60;
     setDuration(Math.max(0, endSec - startSec));
   }, [startTime, endTime]);
+
+  useEffect(() => {
+    if (!existingEntry?.Id) getLatestEndTime().then(latest => { setStartTime(latest); })
+  });
+
 
   const handleSave = async () => {
     const entryData = {
@@ -72,6 +76,24 @@ export default function EntryPage() {
     }
 
     router.back();
+  };
+
+
+
+
+  const handleDelete = async () => {
+    if (!existingEntry?.Id) return;
+      Alert.alert(
+        "Подтвердите удаление",
+        "Вы уверены, что хотите удалить эту запись?",
+        [
+          { text: "Отмена", style: "cancel" },
+          { text: "Удалить", onPress: async () => {
+            await deleteEntry(existingEntry.Id);
+            router.back();
+          }}
+        ]
+      );
   };
 
   return (
@@ -177,6 +199,7 @@ export default function EntryPage() {
         <Text style={{ textAlign: "center", marginBottom: 12 }}>Выбранный цвет: {color}</Text>
 
         <Button title="Save" onPress={handleSave} />
+        <Button title="Delete" color="red" onPress={handleDelete} disabled={!existingEntry?.Id} />
       </ScrollView>
     </SafeAreaView>
   );

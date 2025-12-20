@@ -30,22 +30,8 @@ interface DayTimelineProps {
   backgroundColor?: string;
 }
 
-export const DayTimeline: React.FC<DayTimelineProps> = ({
-  entries,
-  size = 150,
-  strokeWidth = 10,
-  backgroundColor = "#eee",
-}) => {
-  const radius = (size - strokeWidth) / 2;
-  const center = size / 2;
-
-  const [tooltip, setTooltip] = useState<{ names: string[]; visible: boolean }>({
-    names: [],
-    visible: false,
-  });
-
-  // вычисляем все пересечения
-  const overlaps: { start: number; end: number; entries: DiaryEntry[] }[] = [];
+// вычисляем все пересечения
+function setOverLaps(overlaps: { start: number; end: number; entries: DiaryEntry[] }[], entries: DiaryEntry[]) {
   for (let i = 0; i < entries.length; i++) {
     for (let j = i + 1; j < entries.length; j++) {
       const start1 = timeToAngle(entries[i].StartTime);
@@ -67,6 +53,66 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({
       }
     }
   }
+}
+
+function getTotalCoveredMinutes(entries: DiaryEntry[]): number {
+  if (entries.length === 0) return 0;
+
+  // Преобразуем в минуты от 0 до 1440 (24 * 60)
+  const intervals = entries.map(e => {
+    const [h1, m1] = e.StartTime.split(':').map(Number);
+    const [h2, m2] = e.EndTime.split(':').map(Number);
+    let start = h1 * 60 + m1;
+    let end = h2 * 60 + m2;
+    if (end <= start) end += 24 * 60; // пересекает полночь
+    return [start, end] as [number, number];
+  });
+
+  // Сортируем по началу
+  intervals.sort((a, b) => a[0] - b[0]);
+
+  // Объединяем
+  const merged: [number, number][] = [];
+  let [curStart, curEnd] = intervals[0];
+
+  for (let i = 1; i < intervals.length; i++) {
+    const [start, end] = intervals[i];
+    if (start <= curEnd) {
+      curEnd = Math.max(curEnd, end);
+    } else {
+      merged.push([curStart, curEnd]);
+      curStart = start;
+      curEnd = end;
+    }
+  }
+  merged.push([curStart, curEnd]);
+
+  // Суммируем, учитывая возможный переход через полночь
+  let total = 0;
+  for (const [start, end] of merged) {
+    if (end > 24 * 60) {
+      total += (24 * 60 - start) + (end - 24 * 60);
+    } else {
+      total += end - start;
+    }
+  }
+
+  return total;
+}
+
+export const DayTimeline: React.FC<DayTimelineProps> = ({ entries, size = 150, strokeWidth = 10, backgroundColor = "#eee", }) => {
+  const radius = (size - strokeWidth) / 2;
+  const center = size / 2;
+
+  const [tooltip, setTooltip] = useState<{ names: string[]; visible: boolean }>({ names: [], visible: false, });
+
+  // вычисляем все пересечения
+  const overlaps: { start: number; end: number; entries: DiaryEntry[] }[] = [];
+  setOverLaps(overlaps, entries);
+
+  const coveredMinutes = getTotalCoveredMinutes(entries);
+  const freeMinutes = 24 * 60 - coveredMinutes;
+  const coveredPercent = Math.round((coveredMinutes / (24 * 60)) * 100);
 
   const getEntriesAtAngle = (angle: number) => {
     return entries.filter((entry) => {
@@ -131,6 +177,16 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({
           );
         })}
       </Svg>
+
+        {/* Центральный текст */}
+      <View style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: size, justifyContent: 'center', alignItems: 'center', }}>
+        <Text style={{ fontSize: 16, fontWeight: 'bold', textAlign: 'center' }}>
+          {coveredMinutes} / {24 * 60} мин
+        </Text>
+        <Text style={{ fontSize: 12, color: '#666' }}>
+          {coveredPercent}%
+        </Text>
+      </View>
 
       {/* тултип */}
       <Modal transparent visible={tooltip.visible} animationType="fade">

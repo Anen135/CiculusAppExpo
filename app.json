@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "notes-app",
-    "slug": "notes-app",
+    "name": "ciculus-app",
+    "slug": "ciculus-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "notesapp",
+    "scheme": "ciculusapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -19,7 +19,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.annenya.ciculusapp"
     },
     "web": {
       "output": "static",
@@ -44,6 +45,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "04f8490a-ec32-4176-8fcf-5d25c1d638a9"
+      }
     }
   }
 }

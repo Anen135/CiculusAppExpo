@@ -31,9 +31,7 @@
         "Allow users to set custom reminder times." : "Позволить пользователям устанавливать собственное время напоминаний."
     }, 
     "Add settings page" : {
-        "Add settings page" : "Добавить страницу настроек",
-        "Implement a settings page to customize app preferences." : "Реализовать страницу настроек для настройки предпочтений приложения.",
-        "Allow users to change themes, fonts, and notification settings." : "Позволить пользователям изменять темы, шрифты и настройки уведомлений."
+        "Allow users to change themes, fonts, and notification settings." : "шрифты и настройки уведомлений."
     },
     "Add entry template" : {
         "Add entry template" : "Добавить шаблон записи",

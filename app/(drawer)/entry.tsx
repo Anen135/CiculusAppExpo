@@ -1,10 +1,13 @@
+import { PRESET_COLORS } from "@/constants/presetColors";
+import { useSettings } from "@/context/SettingsСontext";
 import { DiaryEntry, useDiary } from "@/hooks/useDiary";
 import { dateToTimeString, getCurrentTime, getLocalDateStr, timeStringToDate } from "@/utils/dateUtil";
+import i18n from "@/utils/i18n";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useRouter } from "expo-router";
 import { useSearchParams } from "expo-router/build/hooks";
 import { useEffect, useState } from "react";
-import { Alert, Button, Platform, Pressable, ScrollView, Text, TextInput } from "react-native";
+import { Alert, Button, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ColorPicker from "react-native-wheel-color-picker";
 
@@ -25,6 +28,8 @@ export default function EntryPage() {
   const [showEndPicker, setShowEndPicker] = useState(false);
   const [duration, setDuration] = useState(0);
   const [color, setColor] = useState(existingEntry?.Color || "#4CAF50");
+
+  const { colorSelectMode } = useSettings();
 
   // Пересчёт длительности
   useEffect(() => {
@@ -83,11 +88,11 @@ export default function EntryPage() {
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <ScrollView style={{ flex: 1, padding: 12 }} contentContainerStyle={{ paddingBottom: 50 }}>
-        <Text style={{ fontWeight: "bold", fontSize: 16 }}>Title</Text>
+        <Text style={{ fontWeight: "bold", fontSize: 16 }}>{i18n.t('title')}</Text>
         <TextInput
           value={name}
           onChangeText={setName}
-          placeholder="Title"
+          placeholder={i18n.t('entry.newEntry')}
           placeholderTextColor="#999"
           style={{
             borderWidth: 1,
@@ -98,19 +103,19 @@ export default function EntryPage() {
           }}
         />
 
-        <Text style={{ fontWeight: "bold", fontSize: 16 }}>Time</Text>
+        <Text style={{ fontWeight: "bold", fontSize: 16 }}>{i18n.t('time')}</Text>
 
         {/* START */}
         <Pressable
           onPress={() => setShowStartPicker(true)}
           style={{ padding: 10, borderWidth: 1, borderColor: "#ccc", borderRadius: 5, marginBottom: 8 }}
         >
-          <Text>Start: {startTime.slice(0, 5)}</Text>
+          <Text>{i18n.t('start')}: {startTime.slice(0, 5)}</Text>
         </Pressable>
 
         {showStartPicker && (
           <DateTimePicker
-            value={timeStringToDate(startTime, entryDateStr)} // ← ключевое исправление!
+            value={timeStringToDate(startTime, entryDateStr)} 
             mode="time"
             is24Hour
             display={Platform.OS === "ios" ? "spinner" : "default"}
@@ -128,12 +133,12 @@ export default function EntryPage() {
           onPress={() => setShowEndPicker(true)}
           style={{ padding: 10, borderWidth: 1, borderColor: "#ccc", borderRadius: 5 }}
         >
-          <Text>End: {endTime.slice(0, 5)}</Text>
+          <Text>{i18n.t('end')}: {endTime.slice(0, 5)}</Text>
         </Pressable>
 
         {showEndPicker && (
           <DateTimePicker
-            value={timeStringToDate(endTime, entryDateStr)} // ← ключевое исправление!
+            value={timeStringToDate(endTime, entryDateStr)}
             mode="time"
             is24Hour
             display={Platform.OS === "ios" ? "spinner" : "default"}
@@ -147,18 +152,18 @@ export default function EntryPage() {
         )}
 
         <Text style={{ fontWeight: "bold", fontSize: 16, marginVertical: 12 }}>
-          Duration: {Math.floor(duration / 3600).toString().padStart(2, "0")}:
+          {i18n.t('duration')}: {Math.floor(duration / 3600).toString().padStart(2, "0")}:
           {Math.floor((duration % 3600) / 60).toString().padStart(2, "0")}
         </Text>
         <Text style={{ fontWeight: "bold", fontSize: 16, marginVertical: 12 }}>
-          Date: {entryDateStr}
+          {i18n.t('date')}: {entryDateStr}
         </Text>
 
-        <Text style={{ fontWeight: "bold", fontSize: 16 }}>Notes</Text>
+        <Text style={{ fontWeight: "bold", fontSize: 16 }}>{i18n.t('notes')}</Text>
         <TextInput
           value={notes}
           onChangeText={setNotes}
-          placeholder="Notes..."
+          placeholder={i18n.t('notes')}
           placeholderTextColor="#999"
           multiline
           style={{
@@ -172,21 +177,49 @@ export default function EntryPage() {
           }}
         />
 
-        <Text style={{ fontWeight: "bold", fontSize: 16, marginVertical: 12 }}>Color</Text>
-        <ColorPicker
-          color={color}
-          thumbSize={30}
-          sliderSize={30}
-          noSnap={true}
-          row={false}
-          swatches={true}
-          swatchesLast={true}
-          onColorChange={setColor}
-        />
-        <Text style={{ textAlign: "center", marginBottom: 12 }}>Выбранный цвет: {color}</Text>
+        <Text style={{ fontWeight: "bold", fontSize: 16, marginVertical: 12 }}>
+  {i18n.t("color")}
+</Text>
 
-        <Button title="Save" onPress={handleSave} />
-        <Button title="Delete" color="red" onPress={handleDelete} disabled={!existingEntry?.Id} />
+{colorSelectMode === "palette" && (
+  <>
+    <ColorPicker
+      color={color}
+      thumbSize={30}
+      sliderSize={30}
+      noSnap
+      row={false}
+      swatches
+      swatchesLast
+      onColorChange={setColor}
+    />
+    <Text style={{ textAlign: "center" }}>
+      {i18n.t("entry.selectedColor")}: {color}
+    </Text>
+  </>
+)}
+
+{colorSelectMode === "preset" && (
+  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+    {PRESET_COLORS.map(c => (
+      <Pressable
+        key={c}
+        onPress={() => setColor(c)}
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: c,
+          borderWidth: color === c ? 3 : 1,
+          borderColor: color === c ? "#000" : "#ccc",
+        }}
+      />
+    ))}
+  </View>
+)}
+
+        <Button title={i18n.t('save')} onPress={handleSave} />
+        <Button title={i18n.t('delete')} color="red" onPress={handleDelete} disabled={!existingEntry?.Id} />
       </ScrollView>
     </SafeAreaView>
   );

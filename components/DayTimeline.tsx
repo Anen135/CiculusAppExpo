@@ -1,27 +1,10 @@
 import { DiaryEntry } from "@/hooks/useDiary";
+import { describeArc, timeToAngle } from "@/utils/DayTimeLineUtil";
+import i18n from "@/utils/i18n";
 import React, { useState } from "react";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Svg, { Circle, Defs, G, Path, Pattern, Rect } from "react-native-svg";
 
-// перевод времени в угол
-function timeToAngle(time: string) {
-  const [hours, minutes] = time.split(":").map(Number);
-  return ((hours * 60 + minutes) / (24 * 60)) * 360;
-}
-
-// генерация SVG дуги
-function describeArc(x: number, y: number, radius: number, startAngle: number, endAngle: number) {
-  const start = {
-    x: x + radius * Math.cos((Math.PI / 180) * (startAngle - 90)),
-    y: y + radius * Math.sin((Math.PI / 180) * (startAngle - 90)),
-  };
-  const end = {
-    x: x + radius * Math.cos((Math.PI / 180) * (endAngle - 90)),
-    y: y + radius * Math.sin((Math.PI / 180) * (endAngle - 90)),
-  };
-  const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
-  return `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${end.x} ${end.y}`;
-}
 
 interface DayTimelineProps {
   entries: DiaryEntry[];
@@ -181,7 +164,7 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ entries, size = 150, s
         {/* Центральный текст */}
       <View style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: size, justifyContent: 'center', alignItems: 'center', }}>
         <Text style={{ fontSize: 16, fontWeight: 'bold', textAlign: 'center' }}>
-          {coveredMinutes} / {24 * 60} мин
+          {coveredMinutes} / {24 * 60} {i18n.t('minutes')}
         </Text>
         <Text style={{ fontSize: 12, color: '#666' }}>
           {coveredPercent}%

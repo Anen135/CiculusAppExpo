@@ -25,7 +25,7 @@ export function useAttribute() {
     const addAttribute = async (name: string, color: string = "#888888") => { await db.runAsync(`INSERT INTO Attribute (Name, Color) VALUES (?, ?)`, name, color); };
     const updateAttribute = async (id: number, name: string, color: string = "#888888") => { await db.runAsync(`UPDATE Attribute SET Name = ?, Color = ? WHERE Id = ?`, name, color, id); };
     const deleteAttribute = async (id: number) => { await db.runAsync(`DELETE FROM Attribute WHERE Id = ?`, id); };
-    const getAttributesForEntry = async (entryId: number): Promise<Attribute[]> => {
+    const getAttributesForEntry = useCallback(async (entryId: number): Promise<Attribute[]> => {
         try {
             const rows = await db.getAllAsync<Attribute>(
                 `SELECT a.Id AS Id, a.Name AS Name, a.Color AS Color
@@ -39,8 +39,8 @@ export function useAttribute() {
             console.error("Ошибка при получении атрибутов для записи:", e);
             return [];
         }
-    };
-    const setAttributesForEntry = async (entryId: number, attributeIds: Attribute[]) => {
+    }, [db]);
+    const setAttributesForEntry = useCallback(async (entryId: number, attributeIds: Attribute[]) => {
         try {
             await db.runAsync("DELETE FROM DiaryEntryAttribute WHERE DiaryEntryId = ?", entryId);
             for (const attribute of attributeIds) {
@@ -49,7 +49,7 @@ export function useAttribute() {
         } catch (e) {
             console.error("Ошибка при установке атрибутов для записи:", e);
         }
-    };
+    }, [db]);
 
     return { attributes, addAttribute, updateAttribute, deleteAttribute, loadAttributes, getAttributesForEntry, setAttributesForEntry };
 };

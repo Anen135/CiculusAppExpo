@@ -66,11 +66,12 @@ export function useDiary() {
     );
   };
 
+
   const deleteEntry = async (id: number) => {
     await db.runAsync(`DELETE FROM DiaryEntry WHERE Id = ?`, id);
   };
 
-  const getLatestEndTime = async (date: Date | null = null): Promise<string> => {
+  const getLatestEndTime = useCallback(async (date: Date | null = null): Promise<string> => {
     try {
       const today = getLocalDateStr(date ?? new Date());
       const result = await db.getFirstAsync<{ max_end_time: string }>( `SELECT MAX(EndTime) AS max_end_time FROM DiaryEntry WHERE Date = ?`, today );
@@ -79,7 +80,7 @@ export function useDiary() {
       console.error("Ошибка при получении последнего EndTime:", e);
       return "00:00:00";
     }
-  };
+  }, [db] );
 
   const last_insert_id = async (): Promise<number> => {
     try {

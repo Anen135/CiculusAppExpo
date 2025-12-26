@@ -49,7 +49,7 @@ export default function MainPage() {
   const renderItem = ({ item }: { item: DiaryEntry }) => (
     <TouchableOpacity
       onPress={() => router.push({ pathname: "/entry", params: { entry: JSON.stringify(item) } })}
-      style={{ flexDirection: "row", padding: 10, backgroundColor: colors.cardItemBackground, marginVertical: 4, borderRadius: 5,}}
+      style={{ flexDirection: "row", padding: 10, backgroundColor: colors.card, marginVertical: 4, borderRadius: 5,}}
     >
       <Text style={{ fontWeight: "bold", width: 100, color: colors.cardItemText }}>
         {item.StartTime} – {item.EndTime}
@@ -66,19 +66,14 @@ export default function MainPage() {
         </Text>
         {
           dayTimelineViewMode === "v1" ?
-          <DayTimeline entries={dayEntries} /> : 
+          <DayTimeline entries={dayEntries} /> :
           <DayDiary entries={dayEntries} />
         }
-
-        {dayEntries.length == 0 && (
-          <Text style={{ textAlign: "center", fontSize: 16, marginVertical: 20, color: "#666" }}>
-            {i18n.t('main.noEntries')} 
-          </Text>
-        )}
 
         <FlatList
           data={dayEntries}
           keyExtractor={(item) => item.Id.toString()}
+          ListEmptyComponent={ <Text style={{ textAlign: "center", fontSize: 16, marginVertical: 20, color: "#666" }}> {i18n.t('main.noEntries')} </Text> }
           renderItem={renderItem}
         />
 

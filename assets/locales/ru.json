@@ -53,5 +53,15 @@
         "deleteEntry": "Удалить запись",
         "records_for_date": "Записи за ",
         "current_time": "Текущее время"
+    },
+    "attributes": {
+        "attributes": "Атрибуты",
+        "addAttribute": "Добавить атрибут",
+        "editAttribute": "Редактировать атрибут",
+        "deleteAttribute": "Удалить атрибут",
+        "confirmDelete": "Вы уверены, что хотите удалить этот атрибут?",
+        "name": "Имя",
+        "color": "Цвет",
+        "noAttributes": "Атрибутов нет"
     }
 }

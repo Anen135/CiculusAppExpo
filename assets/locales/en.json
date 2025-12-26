@@ -6,6 +6,7 @@
     "notes": "Notes",
     "color": "Color",
     "save": "Save",
+    "close": "Close",
     "cancel": "Cancel",
     "delete": "Delete",
     "end": "End",
@@ -53,5 +54,18 @@
         "deleteEntry": "Delete Entry",
         "records_for_date": "Entries for ",
         "current_time": "Current Time"
+    },
+    "attributes": {
+        "attributes": "Attributes",
+        "addAttribute": "Add Attribute",
+        "editAttribute": "Edit Attribute",
+        "deleteAttribute": "Delete Attribute",
+        "confirmDelete": "Are you sure you want to delete this attribute?",
+        "name": "Name",
+        "color": "Color",
+        "noAttributes": "No attributes"
+    },
+    "search": {
+        "search": "Search"
     }
 }

@@ -1,5 +1,6 @@
 import { PRESET_COLORS } from "@/constants/presetColors";
 import { useSettings } from "@/context/SettingsСontext";
+import { Attribute, useAttribute } from "@/hooks/useAttribute";
 import { DiaryEntry, useDiary } from "@/hooks/useDiary";
 import { dateToTimeString, getCurrentTime, getLocalDateStr, timeStringToDate } from "@/utils/dateUtil";
 import i18n from "@/utils/i18n";
@@ -12,15 +13,17 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import ColorPicker from "react-native-wheel-color-picker";
 
 export default function EntryPage() {
-  const { addEntry, updateEntry, deleteEntry, getLatestEndTime } = useDiary();
+  const { addEntry, updateEntry, deleteEntry, getLatestEndTime, last_insert_id } = useDiary();
 
   const params = useSearchParams();
   const router = useRouter();
   const entryJson = params.get("entry");
   const existingEntry: DiaryEntry | null = entryJson ? JSON.parse(entryJson) : null;
-
+  
   const entryDateStr = existingEntry?.Date || getLocalDateStr(new Date());
   const [name, setName] = useState(existingEntry?.Name || "");
+
+
   const [notes, setNotes] = useState(existingEntry?.Notes || "");
   const [startTime, setStartTime] = useState(existingEntry?.StartTime || "00:00:00");
   const [endTime, setEndTime] = useState(existingEntry?.EndTime || getCurrentTime());
@@ -29,16 +32,21 @@ export default function EntryPage() {
   const [duration, setDuration] = useState(0);
   const [color, setColor] = useState(existingEntry?.Color || "#4CAF50");
 
+  const { attributes: allAttributes, setAttributesForEntry, getAttributesForEntry} = useAttribute();
+  const [selectedAttributes, setSelectedAttributes] = useState<Attribute[]>([]);
+
   const { colorSelectMode } = useSettings();
 
   // Пересчёт длительности
   useEffect(() => {
+    
     const [h1, m1] = startTime.split(":").map(Number);
     const [h2, m2] = endTime.split(":").map(Number);
     const startSec = h1 * 3600 + m1 * 60;
     const endSec = h2 * 3600 + m2 * 60;
     setDuration(Math.max(0, endSec - startSec));
   }, [startTime, endTime]);
+
   // Установка времени начала по последнему времени окончания
   useEffect(() => {
     if (!existingEntry?.Id) {
@@ -47,6 +55,21 @@ export default function EntryPage() {
       });
     }
   }, [entryDateStr, existingEntry?.Id, getLatestEndTime]);
+
+  useEffect(() => {
+    if (existingEntry?.Id) {
+      getAttributesForEntry(existingEntry.Id).then(attr => setSelectedAttributes(attr));
+    }
+  }, [existingEntry?.Id]);
+
+
+  // синхронизация после загрузки existingEntry
+  useEffect(() => {
+    if (existingEntry?.Name) {
+      setName(existingEntry.Name);
+    }
+  }, [existingEntry?.Name]);
+
 
   const handleSave = async () => {
     const entryData = {
@@ -60,8 +83,11 @@ export default function EntryPage() {
 
     if (existingEntry?.Id) {
       await updateEntry(existingEntry.Id, entryData);
+      await setAttributesForEntry(existingEntry.Id, selectedAttributes);
     } else {
       await addEntry(entryData);
+      const newId = await last_insert_id();
+      await setAttributesForEntry(newId, selectedAttributes);
     }
 
     router.back();
@@ -85,6 +111,14 @@ export default function EntryPage() {
     );
   };
 
+  const toggleAttribute = (attr: Attribute) => {
+    setSelectedAttributes(prev =>
+      prev.some(a => a.Id === attr.Id)
+        ? prev.filter(a => a.Id !== attr.Id)
+        : [...prev, attr]
+    );
+  };
+
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <ScrollView style={{ flex: 1, padding: 12 }} contentContainerStyle={{ paddingBottom: 50 }}>
@@ -102,6 +136,28 @@ export default function EntryPage() {
             borderRadius: 5,
           }}
         />
+
+        <Text style={{ fontWeight: "bold", fontSize: 16, marginVertical: 12 }}>Атрибуты</Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+          {allAttributes.map(attr => (
+            <Pressable
+              key={attr.Id}
+              onPress={() => toggleAttribute(attr)}
+              style={{
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 12,
+                borderWidth: selectedAttributes.some(a => a.Id === attr.Id) ? 2 : 1,
+                borderColor: selectedAttributes.some(a => a.Id === attr.Id) ? "#000" : "#ccc",
+                backgroundColor: attr.Color,
+                marginBottom: 4,
+              }}
+            >
+              <Text style={{ color: "#fff" }}>{attr.Name}</Text>
+            </Pressable>
+          ))}
+        </View>
+
 
         <Text style={{ fontWeight: "bold", fontSize: 16 }}>{i18n.t('time')}</Text>
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { DiaryEntry } from "@/hooks/useDiary";
 import { describeArc, timeToAngle } from "@/utils/DayTimeLineUtil";
 import i18n from "@/utils/i18n";

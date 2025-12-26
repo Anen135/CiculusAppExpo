@@ -1,6 +1,6 @@
 import { getLocalDateStr } from "@/utils/dateUtil";
 import { useSQLiteContext } from "expo-sqlite";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export interface DiaryEntry {
   Id: number;
@@ -11,35 +11,17 @@ export interface DiaryEntry {
   Notes: string;
   DurationSeconds: number;
   Color?: string;
+  Tags?: string;
 }
 
 export function useDiary() {
   const db = useSQLiteContext();
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const all = await db.getAllAsync<DiaryEntry>(`
-          SELECT
-            Id, Date, StartTime, EndTime, Name, Notes, Color,
-            (strftime('%s', '2000-01-01 ' || EndTime) - strftime('%s', '2000-01-01 ' || StartTime)) AS DurationSeconds
-          FROM DiaryEntry
-          ORDER BY Date DESC, StartTime ASC;
-        `);
-        setEntries(all);
-      } catch (e) {
-        console.error("Ошибка при загрузке записей:", e);
-      }
-    };
-
-    load();
-  }, [db]);
-
-  const loadEntries = async () => {
+  const loadEntries = useCallback(async () => {
     try {
       const all = await db.getAllAsync<DiaryEntry>(`
         SELECT
-          Id, Date, StartTime, EndTime, Name, Notes, Color,
+          Id, Date, StartTime, EndTime, Name, Notes, Color, Tags,
           (strftime('%s', '2000-01-01 ' || EndTime) - strftime('%s', '2000-01-01 ' || StartTime)) AS DurationSeconds
         FROM DiaryEntry
         ORDER BY Date DESC, StartTime ASC;
@@ -48,12 +30,14 @@ export function useDiary() {
     } catch (e) {
       console.error("Ошибка при загрузке записей:", e);
     }
-  };
+  }, [db]);
+  useEffect(() => {
+      loadEntries();
+  }, [loadEntries]);
 
-  const addEntry = async (
-    entry: Partial<Omit<DiaryEntry, "Id" | "DurationSeconds">>
-  ) => {
-    await db.runAsync(
+
+  const addEntry = async ( entry: Partial<Omit<DiaryEntry, "Id" | "DurationSeconds">> ) => {
+    return await db.runAsync(
       `INSERT INTO DiaryEntry (Date, StartTime, EndTime, Name, Notes, Color) VALUES (?, ?, ?, ?, ?, ?)`,
       entry.Date || new Date().toISOString().slice(0, 10),
       entry.StartTime || "00:00:00",
@@ -69,7 +53,7 @@ export function useDiary() {
     entry: Partial<Omit<DiaryEntry, "Id" | "DurationSeconds">>
   ) => {
     await db.runAsync(
-      `UPDATE DiaryEntry 
+      `UPDATE DiaryEntry
        SET Date = ?, StartTime = ?, EndTime = ?, Name = ?, Notes = ?, Color = ?
        WHERE Id = ?`,
       entry.Date || new Date().toISOString().slice(0, 10),
@@ -97,5 +81,17 @@ export function useDiary() {
     }
   };
 
-  return { entries, addEntry, updateEntry, deleteEntry, loadEntries, getLatestEndTime, };
+  const last_insert_id = async (): Promise<number> => {
+    try {
+      const result = await db.getFirstAsync<{ last_id: number }>(`SELECT last_insert_rowid() AS last_id;`);
+      return result?.last_id || 0;
+    } catch (e) {
+      console.error("Ошибка при получении last_insert_id:", e);
+      return 0;
+    }
+  };
+
+
+
+  return { entries, addEntry, updateEntry, deleteEntry, loadEntries, getLatestEndTime, last_insert_id};
 }

@@ -6,6 +6,16 @@ import { Drawer } from "expo-router/drawer";
 import { SQLiteProvider } from "expo-sqlite";
 import { StatusBar } from "expo-status-bar";
 
+async function initAttributesTable(db: any) {
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS Attribute (
+      Id INTEGER PRIMARY KEY AUTOINCREMENT,
+      Name TEXT NOT NULL UNIQUE,
+      Color TEXT DEFAULT '#888888'
+    );
+  `);
+}
+
 async function initDiaryTable(db: any) {
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS DiaryEntry (
@@ -14,15 +24,28 @@ async function initDiaryTable(db: any) {
       StartTime TEXT NOT NULL DEFAULT '00:00:00',
       EndTime TEXT NOT NULL DEFAULT '00:00:00',
       Name TEXT NOT NULL DEFAULT '',
+      Tags TEXT NOT NULL DEFAULT '',
       Notes TEXT NOT NULL DEFAULT '',
       Color TEXT DEFAULT '#4CAF50'
     );
   `);
 }
 
-// Этот компонент ДОЛЖЕН быть внутри ThemeProvider
+async function initDiaryAttributeTable(db: any) {
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS DiaryEntryAttribute (
+      DiaryEntryId INTEGER NOT NULL REFERENCES DiaryEntry(Id) ON DELETE CASCADE,
+      AttributeId INTEGER NOT NULL REFERENCES Attribute(Id) ON DELETE CASCADE,
+      PRIMARY KEY (DiaryEntryId, AttributeId)
+    );
+  `);
+  await db.execAsync(` CREATE INDEX IF NOT EXISTS idx_diaryentryattribute_attributeid ON DiaryEntryAttribute(AttributeId); `);
+  await db.execAsync(` CREATE INDEX IF NOT EXISTS idx_diaryentryattribute_diaryentryid ON DiaryEntryAttribute(DiaryEntryId); `);
+}
+
+
 function ThemedDrawer() {
-  const { colors, theme } = useTheme(); // Теперь безопасно
+  const { colors, theme } = useTheme();
 
   return (
     <>
@@ -48,6 +71,8 @@ function ThemedDrawer() {
       >
         <Drawer.Screen name="index" options={{ title: i18n.t('main.main') }} />
         <Drawer.Screen name="settings" options={{ title: i18n.t('settings.settings') }} />
+        <Drawer.Screen name="attributes" options={{ title: i18n.t('attributes.attributes') }} />
+        <Drawer.Screen name="search" options={{ title: i18n.t('search.search') }} />
         <Drawer.Screen
           name="entry"
           options={{
@@ -62,7 +87,12 @@ function ThemedDrawer() {
 
 export default function DrawerLayout() {
   return (
-      <SQLiteProvider databaseName="diary.db" onInit={initDiaryTable}>
+      <SQLiteProvider databaseName="diary.db" onInit={async (db: any) => {
+        await db.execAsync("PRAGMA foreign_keys = ON;");
+        await initAttributesTable(db);
+        await initDiaryTable(db);
+        await initDiaryAttributeTable(db);
+      }}>
         <SettingsProvider>
           <LanguageProvider>
           <ThemeProvider><ThemedDrawer/></ThemeProvider>

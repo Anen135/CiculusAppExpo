@@ -34,6 +34,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       } catch (e) {
         i18n.locale = 'en';
         setLanguageState('en');
+        console.warn(e);
       }
     };
     loadLanguage();

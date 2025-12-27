@@ -45,7 +45,6 @@ const parsedEntry = useMemo(() => (entryJson ? JSON.parse(entryJson) : null), [e
   const [duration, setDuration] = useState(0);
 
   useEffect(() => {
-    console.log(parsedEntry);
     setExistingEntry(parsedEntry);
 
     setDiaryEntry({

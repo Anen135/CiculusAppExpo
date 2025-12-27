@@ -3,7 +3,7 @@ import { useSQLiteContext } from "expo-sqlite";
 import { useState } from "react";
 
 export type FieldType = 'date' | 'text' | 'attribute';
-
+export type LogicOperator = 'AND' | 'OR';
 export type Operator =
     | 'equals'
     | 'contains'
@@ -16,6 +16,8 @@ export type SearchCondition = {
     id: string;
     field: 'date' | 'name' | 'notes' | 'attribute';
     operator: Operator;
+    logic?: LogicOperator;
+    negate?: boolean;
     value: any;
 };
 
@@ -27,8 +29,12 @@ export function useSearch() {
 
     const runSearch = async () => {
         const { sql, params } = buildSQL(conditions);
-        const rows = await db.getAllAsync(sql, params);
-        setResults(rows);
+        try {
+            const rows = await db.getAllAsync(sql, params);
+            setResults(rows);
+        } catch (e) {
+            console.error("SQL error:", sql, "with", params, ":", e);
+        }
     };
     return { conditions, setConditions, results, runSearch };
 }

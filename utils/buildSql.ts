@@ -1,22 +1,5 @@
 import { Attribute } from "@/hooks/useAttribute";
-
-type FieldType = 'date' | 'text' | 'attribute';
-
-type Operator =
-  | 'equals'
-  | 'contains'
-  | 'before'
-  | 'after'
-  | 'between'
-  | 'in';
-
-type SearchCondition = {
-  id: string;
-  field: 'date' | 'name' | 'notes' | 'attribute';
-  operator: Operator;
-  value: any;
-};
-
+import { SearchCondition } from "@/hooks/useSearch";
 
 export function buildSQL(conditions: SearchCondition[]) {
   let sql = `
@@ -24,52 +7,86 @@ export function buildSQL(conditions: SearchCondition[]) {
     FROM DiaryEntry d
     LEFT JOIN DiaryEntryAttribute dea ON dea.DiaryEntryId = d.Id
     LEFT JOIN Attribute a ON a.Id = dea.AttributeId
-    WHERE 1 = 1
   `;
 
   const params: any[] = [];
+  let whereStarted = false;
 
-  conditions.forEach(c => {
+  conditions.forEach((c, index) => {
+    let expr = "";
+
     switch (c.field) {
-      case 'name':
-        if (c.operator === 'contains') {
-          sql += ` AND d.Name LIKE ?`;
+      case "name": {
+        if (c.operator === "contains") {
+          expr = `d.Name LIKE ?`;
           params.push(`%${c.value}%`);
-        }
-        break;
-
-      case 'notes':
-        if (c.operator === 'contains') {
-          sql += ` AND d.Notes LIKE ?`;
-          params.push(`%${c.value}%`);
-        }
-        break;
-
-      case 'date':
-        if (c.operator === 'equals') {
-          sql += ` AND d.Date = ?`;
+        } else if (c.operator === "equals") {
+          expr = `d.Name = ?`;
           params.push(c.value);
         }
-        if (c.operator === 'between') {
-          sql += ` AND d.Date BETWEEN ? AND ?`;
-          params.push(c.value.from, c.value.to);
+        break;
+      }
+
+      case "notes": {
+        if (c.operator === "contains") {
+          expr = `d.Notes LIKE ?`;
+          params.push(`%${c.value}%`);
+        } else if (c.operator === "equals") {
+          expr = `d.Notes = ?`;
+          params.push(c.value);
         }
         break;
+      }
 
-        case "attribute":
-        if (c.value.length > 0) {
-            sql += `
-            AND d.Id IN (
-                SELECT DiaryEntryId
-                FROM DiaryEntryAttribute
-                WHERE AttributeId IN (${c.value.map(() => "?").join(",")})
+      case "date": {
+        if (c.operator === "equals") {
+          expr = `d.Date = ?`;
+          params.push(c.value);
+        } else if (c.operator === "before") {
+          expr = `d.Date < ?`;
+          params.push(c.value);
+        } else if (c.operator === "after") {
+          expr = `d.Date > ?`;
+          params.push(c.value);
+        } else if (c.operator === "between") {
+          if (c.value?.from && c.value?.to) {
+            expr = `d.Date BETWEEN ? AND ?`;
+            params.push(c.value.from, c.value.to);
+          }
+        }
+        break;
+      }
+
+      case "attribute": {
+        if (Array.isArray(c.value) && c.value.length > 0) {
+          expr = `
+            d.Id IN (
+              SELECT DiaryEntryId
+              FROM DiaryEntryAttribute
+              WHERE AttributeId IN (${c.value.map(() => "?").join(",")})
             )
-            `;
-            params.push(...c.value.map((a: Attribute) => a.Id));
+          `;
+          params.push(...c.value.map((a: Attribute) => a.Id));
         }
-       // console.log(c,sql);
         break;
+      }
+    }
 
+    if (!expr) return;
+
+    // NOT
+    if (c.negate) {
+      expr = `NOT (${expr})`;
+    } else {
+      expr = `(${expr})`;
+    }
+
+    // WHERE / AND / OR
+    if (!whereStarted) {
+      sql += ` WHERE ${expr}`;
+      whereStarted = true;
+    } else {
+      sql += ` ${c.logic ?? "AND"} ${expr}`;
     }
   });
 

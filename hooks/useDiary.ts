@@ -39,7 +39,7 @@ export function useDiary() {
   const addEntry = async ( entry: Partial<Omit<DiaryEntry, "Id" | "DurationSeconds">> ) => {
     return await db.runAsync(
       `INSERT INTO DiaryEntry (Date, StartTime, EndTime, Name, Notes, Color) VALUES (?, ?, ?, ?, ?, ?)`,
-      entry.Date || new Date().toISOString().slice(0, 10),
+      entry.Date || getLocalDateStr(new Date()),
       entry.StartTime || "00:00:00",
       entry.EndTime || "00:00:00",
       entry.Name || "",
@@ -56,7 +56,7 @@ export function useDiary() {
       `UPDATE DiaryEntry
        SET Date = ?, StartTime = ?, EndTime = ?, Name = ?, Notes = ?, Color = ?
        WHERE Id = ?`,
-      entry.Date || new Date().toISOString().slice(0, 10),
+      entry.Date || getLocalDateStr(new Date()),
       entry.StartTime || "00:00:00",
       entry.EndTime || "00:00:00",
       entry.Name || "",

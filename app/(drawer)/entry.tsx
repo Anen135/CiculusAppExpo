@@ -1,8 +1,10 @@
+import { AttributePicker } from "@/components/AttributePicker";
 import { PRESET_COLORS } from "@/constants/presetColors";
 import { useSettings } from "@/context/SettingsСontext";
 import { Attribute, useAttribute } from "@/hooks/useAttribute";
 import { useDiary } from "@/hooks/useDiary";
-import { dateToTimeString, getCurrentTime, getLocalDateStr, timeStringToDate } from "@/utils/dateUtil";
+import { cancelNotificationForEntry, scheduledNotification, storeNotificationId } from "@/hooks/useNotification";
+import { dateToTimeString, getCurrentTime, timeStringToDate } from "@/utils/dateUtil";
 import i18n from "@/utils/i18n";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useRouter } from "expo-router";
@@ -13,24 +15,20 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import ColorPicker from "react-native-wheel-color-picker";
 
 export default function EntryPage() {
+  // hooks
   const { addEntry, updateEntry, deleteEntry, getLatestEndTime, last_insert_id } = useDiary();
-  const { attributes: allAttributes, setAttributesForEntry, getAttributesForEntry } = useAttribute();
+  const { setAttributesForEntry, getAttributesForEntry } = useAttribute();
   const { colorSelectMode } = useSettings();
   const router = useRouter();
   const params = useSearchParams();
 
-  
-// Получаем строку entry только при изменении params
-const entryJson = useMemo(() => params.get("entry"), [params]);
 
-// Парсим JSON только при изменении entryJson
-const parsedEntry = useMemo(() => (entryJson ? JSON.parse(entryJson) : null), [entryJson]);
+  // Memo
+  const entryJson = useMemo(() => params.get("entry"), [params]);
+  const parsedEntry = useMemo(() => (entryJson ? JSON.parse(entryJson) : null), [entryJson]);
 
-  const [existingEntry, setExistingEntry] = useState(parsedEntry);
-
-  const entryDateStr = existingEntry?.Date || getLocalDateStr(new Date());
-
-  // Используем один объект для всех данных записи
+  // State
+  // Объекты для всех данных записи
   const [diaryEntry, setDiaryEntry] = useState({
     Name: "",
     Notes: "",
@@ -38,15 +36,13 @@ const parsedEntry = useMemo(() => (entryJson ? JSON.parse(entryJson) : null), [e
     EndTime: getCurrentTime(),
     Color: "#4CAF50",
   });
-
+  const [selectedAttributes, setSelectedAttributes] = useState<Attribute[]>([]);
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
-  const [selectedAttributes, setSelectedAttributes] = useState<Attribute[]>([]);
   const [duration, setDuration] = useState(0);
 
+  // UseEffect - загрузка данных
   useEffect(() => {
-    setExistingEntry(parsedEntry);
-
     setDiaryEntry({
       Name: parsedEntry?.Name || "",
       Notes: parsedEntry?.Notes || "",
@@ -59,13 +55,13 @@ const parsedEntry = useMemo(() => (entryJson ? JSON.parse(entryJson) : null), [e
       getAttributesForEntry(parsedEntry.Id).then(attr => setSelectedAttributes(attr));
     } else {
       setSelectedAttributes([]);
-      getLatestEndTime(timeStringToDate("00:00:00", entryDateStr)).then(latest => {
+      getLatestEndTime(timeStringToDate("00:00:00", parsedEntry?.Date)).then(latest => {
         setDiaryEntry(prev => ({ ...prev, StartTime: latest }));
       });
     }
-  }, [entryDateStr, getAttributesForEntry, getLatestEndTime, parsedEntry]);
+  }, [getAttributesForEntry, getLatestEndTime, parsedEntry]);
 
-  // Пересчет длительности
+  // UseEffect - Пересчет длительности
   useEffect(() => {
     const [h1, m1] = diaryEntry.StartTime.split(":").map(Number);
     const [h2, m2] = diaryEntry.EndTime.split(":").map(Number);
@@ -74,27 +70,74 @@ const parsedEntry = useMemo(() => (entryJson ? JSON.parse(entryJson) : null), [e
     setDuration(Math.max(0, endSec - startSec));
   }, [diaryEntry.StartTime, diaryEntry.EndTime]);
 
+  // Handlers
   const handleSave = async () => {
     const entryData = {
-      Date: entryDateStr,
       ...diaryEntry,
       Name: diaryEntry.Name.trim() || "New Entry",
+      Date: parsedEntry.Date,
     };
 
-    if (existingEntry?.Id) {
-      await updateEntry(existingEntry.Id, entryData);
-      await setAttributesForEntry(existingEntry.Id, selectedAttributes);
+    let entryId: number;
+
+    if (parsedEntry?.Id) {
+      // === РЕДАКТИРОВАНИЕ ===
+      entryId = parsedEntry.Id;
+
+      // Отменяем старое уведомление, если было
+      await cancelNotificationForEntry(entryId);
+
+      await updateEntry(entryId, entryData);
+      await setAttributesForEntry(entryId, selectedAttributes);
+
+      // Планируем новое уведомление (если время в будущем)
+      const [year, month, day] = parsedEntry.Date.split('-').map(Number);
+      const [hour, minute] = diaryEntry.StartTime.split(':').map(Number);
+      const notificationDate = new Date(year, month - 1, day, hour, minute);
+
+      if (notificationDate.getTime() > Date.now()) {
+        const notificationId = await scheduledNotification(
+          entryData.Name,
+          entryData.Notes || `Начало в ${diaryEntry.StartTime.slice(0, 5)}`,
+          notificationDate,
+          { entryId }
+        );
+
+        if (notificationId) {
+          await storeNotificationId(entryId, notificationId);
+        }
+      }
     } else {
+      // === СОЗДАНИЕ НОВОЙ ЗАПИСИ ===
       await addEntry(entryData);
-      const newId = await last_insert_id();
-      await setAttributesForEntry(newId, selectedAttributes);
+      entryId = await last_insert_id();
+      await setAttributesForEntry(entryId, selectedAttributes);
+
+      // Планируем уведомление
+      const [year, month, day] = entryData.Date.split('-').map(Number);
+      const [hour, minute] = diaryEntry.StartTime.split(':').map(Number);
+      const notificationDate = new Date(year, month - 1, day, hour, minute);
+
+      if (notificationDate.getTime() > Date.now()) {
+        const notificationId = await scheduledNotification(
+          entryData.Name,
+          entryData.Notes || `Начало в ${diaryEntry.StartTime.slice(0, 5)}`,
+          notificationDate,
+          { entryId }
+        );
+
+        if (notificationId) {
+          await storeNotificationId(entryId, notificationId);
+        }
+      }
     }
 
     router.back();
   };
 
   const handleDelete = async () => {
-    if (!existingEntry?.Id) return;
+    if (!parsedEntry?.Id) return;
+
     Alert.alert(
       "Подтвердите удаление",
       "Вы уверены, что хотите удалить эту запись?",
@@ -103,7 +146,14 @@ const parsedEntry = useMemo(() => (entryJson ? JSON.parse(entryJson) : null), [e
         {
           text: "Удалить",
           onPress: async () => {
-            await deleteEntry(existingEntry.Id);
+            const entryId = parsedEntry.Id;
+
+            // Отменяем уведомление
+            await cancelNotificationForEntry(entryId);
+
+            // Удаляем запись
+            await deleteEntry(entryId);
+
             router.back();
           },
         },
@@ -111,17 +161,10 @@ const parsedEntry = useMemo(() => (entryJson ? JSON.parse(entryJson) : null), [e
     );
   };
 
-  const toggleAttribute = (attr: Attribute) => {
-    setSelectedAttributes(prev =>
-      prev.some(a => a.Id === attr.Id)
-        ? prev.filter(a => a.Id !== attr.Id)
-        : [...prev, attr]
-    );
-  };
-
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <ScrollView style={{ flex: 1, padding: 12 }} contentContainerStyle={{ paddingBottom: 50 }}>
+        {/* Header */}
         <Text style={{ fontWeight: "bold", fontSize: 16 }}>{i18n.t('title')}</Text>
         <TextInput
           value={diaryEntry.Name}
@@ -130,39 +173,18 @@ const parsedEntry = useMemo(() => (entryJson ? JSON.parse(entryJson) : null), [e
           placeholderTextColor="#999"
           style={{ borderWidth: 1, borderColor: "#ccc", padding: 8, marginBottom: 12, borderRadius: 5 }}
         />
+        {/* Attributes */}
+        <Text style={{ fontWeight: "bold", fontSize: 16, marginVertical: 12 }}>{i18n.t('attributes.attributes')}</Text>
+        <AttributePicker value={selectedAttributes} onChange={setSelectedAttributes} />
 
-        <Text style={{ fontWeight: "bold", fontSize: 16, marginVertical: 12 }}>Атрибуты</Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-          {allAttributes.map(attr => (
-            <Pressable
-              key={attr.Id}
-              onPress={() => toggleAttribute(attr)}
-              style={{
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                borderRadius: 12,
-                borderWidth: selectedAttributes.some(a => a.Id === attr.Id) ? 2 : 1,
-                borderColor: selectedAttributes.some(a => a.Id === attr.Id) ? "#000" : "#ccc",
-                backgroundColor: attr.Color,
-                marginBottom: 4,
-              }}
-            >
-              <Text style={{ color: "#fff" }}>{attr.Name}</Text>
-            </Pressable>
-          ))}
-        </View>
-
+        {/* Time Start*/}
         <Text style={{ fontWeight: "bold", fontSize: 16 }}>{i18n.t('time')}</Text>
-
-        <Pressable
-          onPress={() => setShowStartPicker(true)}
-          style={{ padding: 10, borderWidth: 1, borderColor: "#ccc", borderRadius: 5, marginBottom: 8 }}
-        >
+        <Pressable onPress={() => setShowStartPicker(true)} style={{ padding: 10, borderWidth: 1, borderColor: "#ccc", borderRadius: 5, marginBottom: 8 }} >
           <Text>{i18n.t('start')}: {diaryEntry.StartTime.slice(0, 5)}</Text>
         </Pressable>
         {showStartPicker && (
           <DateTimePicker
-            value={timeStringToDate(diaryEntry.StartTime, entryDateStr)}
+            value={timeStringToDate(diaryEntry.StartTime, parsedEntry?.Date)}
             mode="time"
             is24Hour
             display={Platform.OS === "ios" ? "spinner" : "default"}
@@ -173,15 +195,13 @@ const parsedEntry = useMemo(() => (entryJson ? JSON.parse(entryJson) : null), [e
           />
         )}
 
-        <Pressable
-          onPress={() => setShowEndPicker(true)}
-          style={{ padding: 10, borderWidth: 1, borderColor: "#ccc", borderRadius: 5 }}
-        >
+        {/* Time End*/}
+        <Pressable onPress={() => setShowEndPicker(true)} style={{ padding: 10, borderWidth: 1, borderColor: "#ccc", borderRadius: 5 }} >
           <Text>{i18n.t('end')}: {diaryEntry.EndTime.slice(0, 5)}</Text>
         </Pressable>
         {showEndPicker && (
           <DateTimePicker
-            value={timeStringToDate(diaryEntry.EndTime, entryDateStr)}
+            value={timeStringToDate(diaryEntry.EndTime, parsedEntry?.Date)}
             mode="time"
             is24Hour
             display={Platform.OS === "ios" ? "spinner" : "default"}
@@ -192,14 +212,18 @@ const parsedEntry = useMemo(() => (entryJson ? JSON.parse(entryJson) : null), [e
           />
         )}
 
-        <Text style={{ fontWeight: "bold", fontSize: 16, marginVertical: 12 }}>
-          {i18n.t('duration')}: {Math.floor(duration / 3600).toString().padStart(2, "0")}:
-          {Math.floor((duration % 3600) / 60).toString().padStart(2, "0")}
-        </Text>
-        <Text style={{ fontWeight: "bold", fontSize: 16, marginVertical: 12 }}>
-          {i18n.t('date')}: {entryDateStr}
-        </Text>
+        {/* Duration */}
+        <View style={{ marginVertical: 12 }}>
+          <Text style={{ fontWeight: "bold", fontSize: 16 }}>
+            {i18n.t('duration')}: {Math.floor(duration / 3600).toString().padStart(2, "0")}:
+            {Math.floor((duration % 3600) / 60).toString().padStart(2, "0")}
+          </Text>
+          <Text style={{ fontWeight: "bold", fontSize: 16 }}>
+            {i18n.t('date')}: {parsedEntry?.Date}
+          </Text>
+        </View>
 
+        {/* Notes */}
         <Text style={{ fontWeight: "bold", fontSize: 16 }}>{i18n.t('notes')}</Text>
         <TextInput
           value={diaryEntry.Notes}
@@ -210,8 +234,8 @@ const parsedEntry = useMemo(() => (entryJson ? JSON.parse(entryJson) : null), [e
           style={{ borderWidth: 1, borderColor: "#ccc", padding: 8, borderRadius: 5, minHeight: 100, marginBottom: 12, textAlignVertical: "top" }}
         />
 
+        {/* Color */}
         <Text style={{ fontWeight: "bold", fontSize: 16, marginVertical: 12 }}>{i18n.t("color")}</Text>
-
         {colorSelectMode === "palette" && (
           <>
             <ColorPicker
@@ -249,8 +273,9 @@ const parsedEntry = useMemo(() => (entryJson ? JSON.parse(entryJson) : null), [e
           </View>
         )}
 
+        {/* Buttons */}
         <Button title={i18n.t('save')} onPress={handleSave} />
-        <Button title={i18n.t('delete')} color="red" onPress={handleDelete} disabled={!existingEntry?.Id} />
+        <Button title={i18n.t('delete')} color="red" onPress={handleDelete} disabled={!parsedEntry?.Id} />
       </ScrollView>
     </SafeAreaView>
   );

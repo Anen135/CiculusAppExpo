@@ -1,10 +1,12 @@
 import { LanguageProvider } from "@/context/LanguageContext";
 import { SettingsProvider } from "@/context/SettingsСontext";
 import { ThemeProvider, useTheme } from "@/context/ThemeContext";
+import { requestPermissionsAsync } from "@/hooks/useNotification";
 import i18n from "@/utils/i18n";
 import { Drawer } from "expo-router/drawer";
 import { SQLiteProvider } from "expo-sqlite";
 import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
 
 async function initAttributesTable(db: any) {
   await db.execAsync(`
@@ -86,6 +88,15 @@ function ThemedDrawer() {
 }
 
 export default function DrawerLayout() {
+ useEffect(() => {
+    async function askPermissions() {
+      try {
+        const granted = await requestPermissionsAsync();
+        if (!granted) { console.warn("Notifications permission not granted"); }
+      } catch (err) { console.error("Error requesting notifications permission:", err); }
+    }
+    askPermissions();
+  }, []);
   return (
       <SQLiteProvider databaseName="diary.db" onInit={async (db: any) => {
         await db.execAsync("PRAGMA foreign_keys = ON;");

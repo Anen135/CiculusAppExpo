@@ -3,6 +3,7 @@ import { PRESET_COLORS } from "@/constants/presetColors";
 import { useSettings } from "@/context/SettingsСontext";
 import { Attribute, useAttribute } from "@/hooks/useAttribute";
 import { useDiary } from "@/hooks/useDiary";
+import { useLogger } from "@/hooks/useLogger";
 import { cancelNotificationForEntry, scheduledNotification, storeNotificationId } from "@/hooks/useNotification";
 import { dateToTimeString, getCurrentTime, timeStringToDate } from "@/utils/dateUtil";
 import i18n from "@/utils/i18n";
@@ -21,6 +22,7 @@ export default function EntryPage() {
   const { colorSelectMode } = useSettings();
   const router = useRouter();
   const params = useSearchParams();
+  const { logError } = useLogger();
 
 
   // Memo
@@ -42,24 +44,35 @@ export default function EntryPage() {
   const [duration, setDuration] = useState(0);
 
   // UseEffect - загрузка данных
-  useEffect(() => {
-    setDiaryEntry({
-      Name: parsedEntry?.Name || "",
-      Notes: parsedEntry?.Notes || "",
-      StartTime: parsedEntry?.StartTime || "00:00:00",
-      EndTime: parsedEntry?.EndTime || getCurrentTime(),
-      Color: parsedEntry?.Color || "#4CAF50",
-    });
-
-    if (parsedEntry?.Id) {
-      getAttributesForEntry(parsedEntry.Id).then(attr => setSelectedAttributes(attr));
-    } else {
-      setSelectedAttributes([]);
-      getLatestEndTime(timeStringToDate("00:00:00", parsedEntry?.Date)).then(latest => {
-        setDiaryEntry(prev => ({ ...prev, StartTime: latest }));
+useEffect(() => {
+  const loadData = async () => {
+    try {
+      setDiaryEntry({
+        Name: parsedEntry?.Name || "",
+        Notes: parsedEntry?.Notes || "",
+        StartTime: parsedEntry?.StartTime || "00:00:00",
+        EndTime: parsedEntry?.EndTime || getCurrentTime(),
+        Color: parsedEntry?.Color || "#4CAF50",
       });
+
+      if (parsedEntry?.Id) {
+        const attr = await getAttributesForEntry(parsedEntry.Id);
+        setSelectedAttributes(attr);
+      } else {
+        setSelectedAttributes([]);
+        const latest = await getLatestEndTime(
+          timeStringToDate("00:00:00", parsedEntry?.Date)
+        );
+        setDiaryEntry(prev => ({ ...prev, StartTime: latest }));
+      }
+    } catch (e) {
+      logError(e, "EntryPage/useEffect loadData");
     }
-  }, [getAttributesForEntry, getLatestEndTime, parsedEntry]);
+  };
+
+  loadData();
+}, [getAttributesForEntry, getLatestEndTime, parsedEntry]);
+
 
   // UseEffect - Пересчет длительности
   useEffect(() => {
@@ -70,27 +83,26 @@ export default function EntryPage() {
     setDuration(Math.max(0, endSec - startSec));
   }, [diaryEntry.StartTime, diaryEntry.EndTime]);
 
+
   // Handlers
   const handleSave = async () => {
+  try {
     const entryData = {
       ...diaryEntry,
       Name: diaryEntry.Name.trim() || "New Entry",
       Date: parsedEntry.Date,
     };
 
-    let entryId: number;
+    let entryId;
 
     if (parsedEntry?.Id) {
       // === РЕДАКТИРОВАНИЕ ===
       entryId = parsedEntry.Id;
 
-      // Отменяем старое уведомление, если было
       await cancelNotificationForEntry(entryId);
-
       await updateEntry(entryId, entryData);
       await setAttributesForEntry(entryId, selectedAttributes);
 
-      // Планируем новое уведомление (если время в будущем)
       const [year, month, day] = parsedEntry.Date.split('-').map(Number);
       const [hour, minute] = diaryEntry.StartTime.split(':').map(Number);
       const notificationDate = new Date(year, month - 1, day, hour, minute);
@@ -108,12 +120,16 @@ export default function EntryPage() {
         }
       }
     } else {
-      // === СОЗДАНИЕ НОВОЙ ЗАПИСИ ===
+      // === СОЗДАНИЕ ===
       await addEntry(entryData);
+
       entryId = await last_insert_id();
+      if (!entryId) {
+        throw new Error("last_insert_id returned null/undefined");
+      }
+
       await setAttributesForEntry(entryId, selectedAttributes);
 
-      // Планируем уведомление
       const [year, month, day] = entryData.Date.split('-').map(Number);
       const [hour, minute] = diaryEntry.StartTime.split(':').map(Number);
       const notificationDate = new Date(year, month - 1, day, hour, minute);
@@ -133,33 +149,39 @@ export default function EntryPage() {
     }
 
     router.back();
-  };
+  } catch (e) {
+    logError(e, "EntryPage/handleSave");
+  }
+};
+
 
   const handleDelete = async () => {
-    if (!parsedEntry?.Id) return;
+  if (!parsedEntry?.Id) return;
 
-    Alert.alert(
-      "Подтвердите удаление",
-      "Вы уверены, что хотите удалить эту запись?",
-      [
-        { text: "Отмена", style: "cancel" },
-        {
-          text: "Удалить",
-          onPress: async () => {
+  Alert.alert(
+    "Подтвердите удаление",
+    "Вы уверены, что хотите удалить эту запись?",
+    [
+      { text: "Отмена", style: "cancel" },
+      {
+        text: "Удалить",
+        onPress: async () => {
+          try {
             const entryId = parsedEntry.Id;
 
-            // Отменяем уведомление
             await cancelNotificationForEntry(entryId);
-
-            // Удаляем запись
             await deleteEntry(entryId);
 
             router.back();
-          },
+          } catch (e) {
+            logError(e, "EntryPage/handleDelete");
+          }
         },
-      ]
-    );
-  };
+      },
+    ]
+  );
+};
+
 
   return (
     <SafeAreaView style={{ flex: 1 }}>

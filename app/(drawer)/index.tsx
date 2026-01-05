@@ -1,6 +1,6 @@
 import { DayDiary } from "@/components/DayDiary";
 import { DayTimeline } from "@/components/DayTimeline";
-import { useSettings } from "@/context/SettingsСontext";
+import { useSettings } from "@/context/SettingsContext";
 import { useTheme } from "@/context/ThemeContext";
 import { DiaryEntry, useDiary } from "@/hooks/useDiary";
 import { getLocalDateStr } from "@/utils/dateUtil";
@@ -18,8 +18,14 @@ export default function MainPage() {
   const { colors } = useTheme();
   const { dayTimelineViewMode  } = useSettings();
 
-  useFocusEffect(useCallback(() => { loadEntries(); }, [loadEntries]));
-  useEffect(() => { loadEntries(); }, [currentDay, loadEntries]);
+  const loadCurrentDayEntries = useCallback(() => {
+    loadEntries(getLocalDateStr(currentDay));
+  }, [currentDay, loadEntries]);
+
+  useFocusEffect(loadCurrentDayEntries);
+  useEffect(() => {
+    loadCurrentDayEntries();
+  }, [loadCurrentDayEntries]);
 
   const headerText = (() => {
     const now = new Date();
@@ -43,9 +49,6 @@ export default function MainPage() {
   })();
 
 
-  const dayEntries = entries.filter(e => e.Date === getLocalDateStr(currentDay));
-
-
   const renderItem = ({ item }: { item: DiaryEntry }) => (
     <TouchableOpacity
       onPress={() => router.push({ pathname: "/entry", params: { entry: JSON.stringify(item) } })}
@@ -66,12 +69,12 @@ export default function MainPage() {
         </Text>
         {
           dayTimelineViewMode === "v1" ?
-          <DayTimeline entries={dayEntries} /> :
-          <DayDiary entries={dayEntries} />
+          <DayTimeline entries={entries} /> :
+          <DayDiary entries={entries} />
         }
 
         <FlatList
-          data={dayEntries}
+          data={entries}
           keyExtractor={(item) => item.Id.toString()}
           ListEmptyComponent={ <Text style={{ textAlign: "center", fontSize: 16, marginVertical: 20, color: "#666" }}> {i18n.t('main.noEntries')} </Text> }
           renderItem={renderItem}

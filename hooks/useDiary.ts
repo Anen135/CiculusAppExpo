@@ -17,23 +17,29 @@ export interface DiaryEntry {
 export function useDiary() {
   const db = useSQLiteContext();
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
-  const loadEntries = useCallback(async () => {
-    try {
-      const all = await db.getAllAsync<DiaryEntry>(`
+  const loadEntries = useCallback(
+    async (date?: string) => {
+      try {
+        let query = `
         SELECT
           Id, Date, StartTime, EndTime, Name, Notes, Color, Tags,
           (strftime('%s', '2000-01-01 ' || EndTime) - strftime('%s', '2000-01-01 ' || StartTime)) AS DurationSeconds
         FROM DiaryEntry
-        ORDER BY Date DESC, StartTime ASC;
-      `);
-      setEntries(all);
-    } catch (e) {
-      console.error("Ошибка при загрузке записей:", e);
-    }
-  }, [db]);
-  useEffect(() => {
-      loadEntries();
-  }, [loadEntries]);
+      `;
+        const params: any[] = [];
+        if (date) {
+          query += " WHERE Date = ?";
+          params.push(date);
+        }
+        query += " ORDER BY Date DESC, StartTime ASC;";
+        const result = await db.getAllAsync<DiaryEntry>(query, params);
+        setEntries(result);
+      } catch (e) {
+        console.error("Ошибка при загрузке записей:", e);
+      }
+    },
+    [db]
+  );
 
 
   const addEntry = async ( entry: Partial<Omit<DiaryEntry, "Id" | "DurationSeconds">> ) => {

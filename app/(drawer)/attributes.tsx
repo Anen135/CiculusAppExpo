@@ -1,26 +1,42 @@
 import { PRESET_COLORS } from "@/constants/presetColors";
-import { useSettings } from "@/context/SettingsСontext";
+import { useSettings } from "@/context/SettingsContext";
 import { useTheme } from "@/context/ThemeContext";
 import { Attribute, useAttribute } from "@/hooks/useAttribute";
-import i18n from "@/utils/i18n";
+import { useLocalization } from "@/hooks/useLocalization";
 import { useState } from "react";
-import { Alert, FlatList, Modal, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View, } from "react-native";
+import {
+  Alert,
+  FlatList,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle } from "react-native-svg";
 import ColorPicker from "react-native-wheel-color-picker";
 
-
 export default function AttributesPage() {
-  const { attributes, loadAttributes, addAttribute, updateAttribute, deleteAttribute } = useAttribute();
+  const {
+    attributes,
+    loadAttributes,
+    addAttribute,
+    updateAttribute,
+    deleteAttribute,
+  } = useAttribute();
+
   const { colors } = useTheme();
   const { colorSelectMode } = useSettings();
+  const { t } = useLocalization(); // 👈 новый API
 
-  const [selectedAttribute, setSelectedAttribute] = useState<Attribute | null>(null);
+  const [selectedAttribute, setSelectedAttribute] =
+    useState<Attribute | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [name, setName] = useState("");
   const [color, setColor] = useState("#888888");
-
-  
 
   const openModal = (attr: Attribute) => {
     setSelectedAttribute(attr);
@@ -30,37 +46,51 @@ export default function AttributesPage() {
   };
 
   const handleSave = async () => {
-    if (selectedAttribute) {
-      await updateAttribute(selectedAttribute.Id, name || ("Attribute" + selectedAttribute.Id), color);
-      await loadAttributes();
-      setModalVisible(false);
-    }
+    if (!selectedAttribute) return;
+
+    await updateAttribute(
+      selectedAttribute.Id,
+      name || `${t("attributes.defaultName")} ${selectedAttribute.Id}`,
+      color
+    );
+
+    await loadAttributes();
+    setModalVisible(false);
   };
 
   const handleAddAttribute = async () => {
-    await addAttribute(`Атрибут ${attributes.length + 1}`, "#888888");
+    await addAttribute(
+      `${t("attributes.defaultName")} ${attributes.length + 1}`,
+      "#888888"
+    );
     await loadAttributes();
   };
 
   const handleDeleteAttribute = async (id: number) => {
     Alert.alert(
-      "Подтвердите удаление",
-      "Вы уверены, что хотите удалить этот атрибут?",
+      t("attributes.confirmDelete.title"),
+      t("attributes.confirmDelete.message"),
       [
-        { text: "Отмена", style: "cancel" },
-        { text: "Удалить", style: "destructive", onPress: async () => {
+        { text: t("cancel"), style: "cancel" },
+        {
+          text: t("delete"),
+          style: "destructive",
+          onPress: async () => {
             await deleteAttribute(id);
             await loadAttributes();
             setModalVisible(false);
-          }
+          },
         },
-      ]);
-    };
+      ]
+    );
+  };
 
   const renderItem = ({ item }: { item: Attribute }) => (
     <TouchableOpacity onPress={() => openModal(item)}>
       <View style={[styles.itemContainer, { backgroundColor: colors.card }]}>
-        <Text style={[styles.itemText, { color: colors.text }]}>{item.Name}</Text>
+        <Text style={[styles.itemText, { color: colors.text }]}>
+          {item.Name}
+        </Text>
         <Svg height="20" width="20">
           <Circle cx="10" cy="10" r="10" fill={item.Color} />
         </Svg>
@@ -89,28 +119,39 @@ export default function AttributesPage() {
       <Modal
         visible={modalVisible}
         animationType="slide"
-        transparent={true}
+        transparent
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+          <View
+            style={[styles.modalContent, { backgroundColor: colors.card }]}
+          >
             <View>
-                <Text style={[styles.modalTitle, { color: colors.text }]}>
-                {i18n.t("attributes.editAttribute")}
-                </Text>
-                {/* delete */}
-                <Text style={{ color: 'red', position: 'absolute', right: 0, top: 0 }} onPress={() => {
-                  if (selectedAttribute) {
-                    handleDeleteAttribute(selectedAttribute.Id);
-                    setModalVisible(false);
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                {t("attributes.editAttribute")}
+              </Text>
+
+              {selectedAttribute && (
+                <Text
+                  style={{
+                    color: "red",
+                    position: "absolute",
+                    right: 0,
+                    top: 0,
+                  }}
+                  onPress={() =>
+                    handleDeleteAttribute(selectedAttribute.Id)
                   }
-                }}>🗑️</Text>
+                >
+                  🗑️
+                </Text>
+              )}
             </View>
 
             <TextInput
               value={name}
               onChangeText={setName}
-              placeholder={i18n.t("attributes.name")}
+              placeholder={t("attributes.name")}
               style={[
                 styles.input,
                 { borderColor: colors.border, color: colors.text },
@@ -118,7 +159,7 @@ export default function AttributesPage() {
             />
 
             <Text style={{ color: colors.text, marginVertical: 8 }}>
-              {i18n.t("attributes.color")}
+              {t("attributes.color")}
             </Text>
 
             {colorSelectMode === "palette" ? (
@@ -133,12 +174,20 @@ export default function AttributesPage() {
                   swatchesLast
                   onColorChange={setColor}
                 />
-                <Text style={{ textAlign: "center", color: colors.text }}>
-                  {i18n.t("entry.selectedColor")}: {color}
+                <Text
+                  style={{ textAlign: "center", color: colors.text }}
+                >
+                  {t("entry.selectedColor")}: {color}
                 </Text>
               </>
             ) : (
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  flexWrap: "wrap",
+                  gap: 12,
+                }}
+              >
                 {PRESET_COLORS.map((c) => (
                   <Pressable
                     key={c}
@@ -149,7 +198,8 @@ export default function AttributesPage() {
                       borderRadius: 20,
                       backgroundColor: c,
                       borderWidth: color === c ? 3 : 1,
-                      borderColor: color === c ? "#000" : "#ccc",
+                      borderColor:
+                        color === c ? "#000" : "#ccc",
                       marginBottom: 8,
                     }}
                   />
@@ -159,9 +209,14 @@ export default function AttributesPage() {
 
             <TouchableOpacity
               onPress={handleSave}
-              style={[styles.closeButton, { backgroundColor: colors.primary }]}
+              style={[
+                styles.closeButton,
+                { backgroundColor: colors.primary },
+              ]}
             >
-              <Text style={{ color: "#fff" }}>{i18n.t("close")}</Text>
+              <Text style={{ color: "#fff" }}>
+                {t("close")}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -169,6 +224,8 @@ export default function AttributesPage() {
     </SafeAreaView>
   );
 }
+
+/* ---------- styles ---------- */
 
 const styles = StyleSheet.create({
   itemContainer: {
@@ -212,7 +269,7 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    backgroundColor: "rgba(0,0,0,0.3)",
     justifyContent: "flex-end",
   },
   modalContent: {

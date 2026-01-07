@@ -1,14 +1,28 @@
-import { I18n } from 'i18n-js';
+import * as Localization from 'expo-localization';
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
 
 import en from '@/assets/locales/en.json';
 import ru from '@/assets/locales/ru.json';
 
-const i18n = new I18n({
-  en,
-  ru,
-});
+export async function createI18n() {
+  const deviceLang =
+    Localization.getLocales()[0]?.languageCode ?? 'en';
 
-//i18n.locale = getLocales()[0]?.languageTag || 'en'; // Автоопределение языка устройства
-i18n.enableFallback = true; // Фолбэк на en, если перевод отсутствует
+  // eslint-disable-next-line import/no-named-as-default-member
+  await i18n
+    .use(initReactI18next)
+    .init({
+      lng: deviceLang,
+      fallbackLng: 'en',
+      resources: {
+        en: { translation: en },
+        ru: { translation: ru },
+      },
+      interpolation: {
+        escapeValue: false,
+      },
+    });
 
-export default i18n;
+  return i18n;
+}

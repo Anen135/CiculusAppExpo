@@ -1,14 +1,14 @@
-// settings.tsx
-import { useLanguage } from '@/context/LanguageContext';
 import {
   ColorSelectMode,
   DayTimelineViewMode,
   useSettings,
-} from '@/context/SettingsСontext';
+} from '@/context/SettingsContext';
 import { useTheme } from '@/context/ThemeContext';
-import i18n from '@/utils/i18n';
+import { useLocalization } from '@/hooks/useLocalization';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+/* ---------- UI helpers ---------- */
 
 function Section({
   title,
@@ -75,16 +75,27 @@ function Row({
   );
 }
 
+/* ---------- Screen ---------- */
+
 export default function SettingsPage() {
   const { appThemeSetting, setAppTheme, colors } = useTheme();
-  const { colorSelectMode, setColorSelectMode } = useSettings();
-  const { dayTimelineViewMode, setDayTimelineViewMode } = useSettings();
-  const { language, setLanguage } = useLanguage();
+  const {
+    colorSelectMode,
+    setColorSelectMode,
+    dayTimelineViewMode,
+    setDayTimelineViewMode,
+  } = useSettings();
+
+  const {
+    t,
+    language,
+    changeLanguage,
+  } = useLocalization(); // 👈 новый API
 
   const themes = [
-    { label: i18n.t('settings.theme.system'), value: 'system' },
-    { label: i18n.t('settings.theme.light'), value: 'light' },
-    { label: i18n.t('settings.theme.dark'), value: 'dark' },
+    { label: t('settings.theme.system'), value: 'system' },
+    { label: t('settings.theme.light'), value: 'light' },
+    { label: t('settings.theme.dark'), value: 'dark' },
   ];
 
   const languages = [
@@ -108,11 +119,11 @@ export default function SettingsPage() {
             marginBottom: 24,
           }}
         >
-          {i18n.t('settings.note_restart')}
+          {t('settings.note_restart')}
         </Text>
 
         {/* Тема */}
-        <Section title={i18n.t('settings.theme.title')}>
+        <Section title={t('settings.theme.title')}>
           {themes.map(({ label, value }) => (
             <Row
               key={value}
@@ -127,27 +138,27 @@ export default function SettingsPage() {
         </Section>
 
         {/* Язык */}
-        <Section title={i18n.t('settings.language.title')}>
+        <Section title={t('settings.language.title')}>
           {languages.map(({ label, value }) => (
             <Row
               key={value}
               label={label}
               selected={language === value}
-              onPress={() => setLanguage(value)}
+              onPress={() => changeLanguage(value)}
               colors={colors}
             />
           ))}
         </Section>
 
         {/* Режим выбора цвета */}
-        <Section title={i18n.t('settings.colorMode.title')}>
+        <Section title={t('settings.colorMode.title')}>
           {[
             {
-              label: i18n.t('settings.colorMode.palette'),
+              label: t('settings.colorMode.palette'),
               value: 'palette',
             },
             {
-              label: i18n.t('settings.colorMode.preset'),
+              label: t('settings.colorMode.preset'),
               value: 'preset',
             },
           ].map(({ label, value }) => (
@@ -164,7 +175,7 @@ export default function SettingsPage() {
         </Section>
 
         {/* Таймлайн */}
-        <Section title={i18n.t('settings.dayTimelineViewMode.title')}>
+        <Section title={t('settings.dayTimelineViewMode.title')}>
           {[
             { label: 'V1', value: 'v1' },
             { label: 'V2', value: 'v2' },

@@ -1,60 +1,42 @@
-// context/LanguageContext.tsx
-import i18n from '@/utils/i18n';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getLocales } from 'expo-localization';
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import * as SplashScreen from 'expo-splash-screen';
+import { ReactNode, useEffect, useState } from 'react';
+import { I18nextProvider } from 'react-i18next';
 
-type Language = 'en' | 'ru';
+import { createI18n } from '@/utils/i18n';
 
-interface LanguageContextType {
-  language: Language;
-  setLanguage: (lang: Language) => Promise<void>;
-}
+SplashScreen.preventAutoHideAsync();
 
-const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+type Props = {
+  children: ReactNode;
+};
 
-export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguageState] = useState<Language>('en');
+export function LocalizationProvider({ children }: Props) {
+  const [i18n, setI18n] = useState<any>(null);
 
-  // Загрузка сохранённого языка при старте
   useEffect(() => {
-    const loadLanguage = async () => {
+    let mounted = true;
+
+    async function init() {
       try {
-        const saved = await AsyncStorage.getItem('appLanguage');
-        if (saved === 'en' || saved === 'ru') {
-          i18n.locale = saved;
-          setLanguageState(saved);
-        } else {
-          // Если ничего не сохранено — берём язык устройства
-          const deviceLocale = getLocales()[0]?.languageCode || 'en';
-          const lang = deviceLocale.startsWith('ru') ? 'ru' : 'en';
-          i18n.locale = lang;
-          setLanguageState(lang);
-        }
-      } catch (e) {
-        i18n.locale = 'en';
-        setLanguageState('en');
-        console.warn(e);
+        const instance = await createI18n();
+        if (mounted) setI18n(instance);
+      } finally {
+        await SplashScreen.hideAsync();
       }
+    }
+
+    init();
+
+    return () => {
+      mounted = false;
     };
-    loadLanguage();
   }, []);
 
-  const setLanguage = async (lang: Language) => {
-    i18n.locale = lang;
-    setLanguageState(lang);
-    await AsyncStorage.setItem('appLanguage', lang);
-  };
+  if (!i18n) return null;
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage }}>
+    <I18nextProvider i18n={i18n}>
       {children}
-    </LanguageContext.Provider>
+    </I18nextProvider>
   );
-};
-
-export const useLanguage = () => {
-  const context = useContext(LanguageContext);
-  if (!context) throw new Error('useLanguage must be used within LanguageProvider');
-  return context;
-};
+}

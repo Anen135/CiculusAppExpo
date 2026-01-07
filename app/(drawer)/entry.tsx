@@ -1,6 +1,6 @@
 import { AttributePicker } from "@/components/AttributePicker";
 import { PRESET_COLORS } from "@/constants/presetColors";
-import { useSettings } from "@/context/SettingsСontext";
+import { useSettings } from "@/context/SettingsContext";
 import { Attribute, useAttribute } from "@/hooks/useAttribute";
 import { useDiary } from "@/hooks/useDiary";
 import { useLogger } from "@/hooks/useLogger";
@@ -71,7 +71,7 @@ useEffect(() => {
   };
 
   loadData();
-}, [getAttributesForEntry, getLatestEndTime, parsedEntry]);
+}, [getAttributesForEntry, getLatestEndTime, parsedEntry, logError]);
 
 
   // UseEffect - Пересчет длительности

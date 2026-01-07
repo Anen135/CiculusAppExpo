@@ -70,6 +70,9 @@ export async function scheduledNotification(
     datetime: Date,
     data: any = {}
 ): Promise<string | null> {
+    if (Platform.OS === 'web') {
+        return null;
+    }
     if (datetime.getTime() <= Date.now()) {
         console.warn('Дата в прошлом — уведомление не запланировано');
         return null;
@@ -95,6 +98,9 @@ export async function scheduledNotification(
  * Мгновенно показывает уведомление (без планирования).
  */
 export async function showNotification(title: string, body: string, data: any = {}) {
+    if (Platform.OS === 'web') {
+        return;
+    }
     await Notifications.scheduleNotificationAsync({
         content: {
             title,

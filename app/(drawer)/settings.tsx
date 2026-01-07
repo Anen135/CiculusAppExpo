@@ -1,10 +1,9 @@
 // settings.tsx
-import { useLanguage } from '@/context/LanguageContext';
 import {
   ColorSelectMode,
   DayTimelineViewMode,
   useSettings,
-} from '@/context/SettingsСontext';
+} from '@/context/SettingsContext';
 import { useTheme } from '@/context/ThemeContext';
 import i18n from '@/utils/i18n';
 import { Pressable, ScrollView, Text, View } from 'react-native';
@@ -77,9 +76,14 @@ function Row({
 
 export default function SettingsPage() {
   const { appThemeSetting, setAppTheme, colors } = useTheme();
-  const { colorSelectMode, setColorSelectMode } = useSettings();
-  const { dayTimelineViewMode, setDayTimelineViewMode } = useSettings();
-  const { language, setLanguage } = useLanguage();
+  const {
+    colorSelectMode,
+    setColorSelectMode,
+    dayTimelineViewMode,
+    setDayTimelineViewMode,
+    language,
+    setLanguage,
+  } = useSettings();
 
   const themes = [
     { label: i18n.t('settings.theme.system'), value: 'system' },

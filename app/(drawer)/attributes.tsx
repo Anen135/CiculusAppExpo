@@ -1,5 +1,5 @@
 import { PRESET_COLORS } from "@/constants/presetColors";
-import { useSettings } from "@/context/SettingsСontext";
+import { useSettings } from "@/context/SettingsContext";
 import { useTheme } from "@/context/ThemeContext";
 import { Attribute, useAttribute } from "@/hooks/useAttribute";
 import i18n from "@/utils/i18n";

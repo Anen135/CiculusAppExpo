@@ -1,11 +1,10 @@
-import { LanguageProvider } from "@/context/LanguageContext";
 import { SettingsProvider } from "@/context/SettingsContext";
 import { ThemeProvider, useTheme } from "@/context/ThemeContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import i18n from "@/utils/i18n";
 import { initDatabase } from "@/utils/database";
 import { Drawer } from "expo-router/drawer";
-import { SQLiteDatabase, SQLiteProvider } from "expo-sqlite";
+import { SQLiteProvider } from "expo-sqlite";
 import { StatusBar } from "expo-status-bar";
 
 function ThemedDrawer() {
@@ -55,9 +54,7 @@ export default function DrawerLayout() {
   return (
       <SQLiteProvider databaseName="diary.db" onInit={initDatabase}>
         <SettingsProvider>
-          <LanguageProvider>
           <ThemeProvider><ThemedDrawer/></ThemeProvider>
-          </LanguageProvider>
         </SettingsProvider>
       </SQLiteProvider>
   );
